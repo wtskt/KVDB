@@ -24,7 +24,6 @@ void testTimeByMs(void (*ptr)());   /* 毫秒级 */
 void testTime(void (*ptr)());       /* 微妙级 */
 
 int main() {
-//    testTimeByMs(&testGet);
     testTime(&testSet);
 //    testTime(&testGet);
 //    testSetOne();
@@ -45,6 +44,7 @@ void testTimeByMs(void (*ptr)()) {
 }
 
 void testTime(void (*ptr)()) {
+    open("data");
 
     LARGE_INTEGER freq;
     LARGE_INTEGER start, stop;
@@ -52,29 +52,29 @@ void testTime(void (*ptr)()) {
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&start);
 
-    open("data");
+
     ptr();
-    close();
+
 
     QueryPerformanceCounter(&stop);
     exe_time = 1e3*(stop.QuadPart - start.QuadPart) / freq.QuadPart / 1000.0;
     printf("耗费时间为%lf秒\n", exe_time);
 
-
+    close();
 }
 
 void testGet() {
-    char *value = getStr("e75C");
+    char *value = getStr("BQK0");
     printf("%s\n", value);
 }
 
 void testSet() {
-    for (int i = 0; i < 10000000; i++) {
+    for (int i = 0; i < 5; i++) {
         char *key = getRandomString(5);
         char *value = getRandomString(5);
         setStr(key, value);
     }
-    printf("新增数据: %d, 当前数据总量: %d\n", KVDB.newCount, KVDB.count);
+    printf("当前数据总量: %d\n", KVDB.count);
 }
 
 void testSetOne() {

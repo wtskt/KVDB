@@ -5,29 +5,18 @@
 #include <stdio.h>
 #include "string.h"
 #include "stdlib.h"
+#include "hashTable.h"
 
 #ifndef UNTITLED_KVDB_H
 #define UNTITLED_KVDB_H
 
-#define MAX_KV_DATA 1000010
-#define MAX_KEY_LEN 8
-#define MAX_VALUE_LEN 8
-
-struct KvData {
-    char key[MAX_KEY_LEN];
-    char value[MAX_VALUE_LEN];
-    struct KvData * next;
-};
-
 struct DataBase {
-    struct KvData * myDataStart;
-    struct KvData * myDataEnd;
-    struct KvData * newDataStart;
+    HashTable * table;
+    HashTable * newData;
 
     char * fileName;
     int dataSize;
     int count;
-    int newCount;
 } KVDB;
 
 /**
@@ -58,24 +47,21 @@ void setStr(const char * key, const char * value);
 
 /**
  * 初始化数据库
+ * @param fileName
  */
 void initDB(const char * fileName);
 
 
 
 void initDB(const char * fileName) {
+    KVDB.table = create(MAX_HASHTABLE_SIZE);
+    KVDB.newData = create(MAX_HASHTABLE_SIZE);
+
     KVDB.dataSize = sizeof (char) * (MAX_KEY_LEN + MAX_VALUE_LEN); /* 读&写的数据大小 */
     KVDB.count = 0;
-    KVDB.newCount = 0;
+
     KVDB.fileName = (char *)malloc(sizeof (char) * strlen(fileName) + 1);
     strcpy(KVDB.fileName, fileName);    /* 标记数据文件 */
-
-    KVDB.myDataStart = malloc(KVDB.dataSize);
-    KVDB.myDataEnd = KVDB.myDataStart;
-    KVDB.newDataStart = KVDB.myDataEnd;
-
-    KVDB.myDataStart->next = NULL;                    /* 设为空 */
-    memset(KVDB.myDataStart->key, '\0', sizeof (char) * 8);
 }
 
 int open(const char *fileName) {
@@ -103,64 +89,39 @@ int open(const char *fileName) {
             break;
         }
 
-        KVDB.myDataEnd->next = node;
-        KVDB.myDataEnd = node;
-        node->next = NULL;
+        insert(KVDB.table, node->key, node->value);
 
         KVDB.count++;
     }
 
-    KVDB.newDataStart = KVDB.myDataEnd; /* 更新新数据初始位置 */
     fclose(fp);
     return 0;
 }
 
 void close() {
     FILE * fp = fopen(KVDB.fileName, "ab");
-    struct KvData * pData = KVDB.newDataStart->next; /* 下一位才是新数据的初始地址 */
-    while (pData != NULL) {
-        if (strcmp(pData->key, "") != 0) {
-            fwrite(pData, KVDB.dataSize, 1, fp);
+
+    // 遍历，将新数据写入文件
+    for (int i = 0; i < KVDB.newData->capacity; i++) {
+        struct KvData * cur = KVDB.newData->buckets[i];
+        
+        while (cur != NULL) {
+            fwrite(cur, KVDB.dataSize, 1, fp);
+            cur = cur->next;
         }
-        pData = pData->next;
     }
 
-    // ToDo
-//    free(KVDB.myDataStart);
-//    free(KVDB.myDataEnd);
-//    free(KVDB.newDataStart);
-//    free(KVDB.newDataEnd);
     fclose(fp);
 }
 
 char *getStr(const char *key) {
-    struct KvData *pData = KVDB.myDataStart;
-    while (pData != NULL) {
-        if (strcmp(pData->key, key) == 0) {
-            return pData->value;
-        }
-        pData = pData->next;
-    }
-    return NULL;
+    return search(KVDB.table, key)->value;
 }
 
 void setStr(const char* key, const char* value) {
-
-    struct KvData * node = malloc(sizeof (struct KvData));
-    memset(node->key, '\0', sizeof (char) * 8);
-    memset(node->value, '\0', sizeof (char) * 8);
-    strcpy(node->key, key);
-    strcpy(node->value, value);
-    node->next = NULL;
-
-    KVDB.myDataEnd->next = node;
-    KVDB.myDataEnd = node;
-
-    KVDB.newCount++;
+    insert(KVDB.newData, key, value);
+    insert(KVDB.table, key, value);
     KVDB.count++;
 }
-
-
-
 #endif //UNTITLED_KVDB_H
 
