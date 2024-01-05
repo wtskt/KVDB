@@ -5,9 +5,9 @@
 #ifndef UNTITLED_HASHTABLE_H
 #define UNTITLED_HASHTABLE_H
 
-#define MAX_HASHTABLE_SIZE 100000
-#define MAX_KEY_LEN 8
-#define MAX_VALUE_LEN 8
+#define MAX_HASHTABLE_SIZE 100000 // 最大存储对数
+#define MAX_KEY_LEN 8 // 最大键长
+#define MAX_VALUE_LEN 8 // 最大值长
 
 struct KvData {
     char key[MAX_KEY_LEN];
@@ -34,7 +34,7 @@ unsigned long hash(const char* str) {
     for (int i = 0; str[i] != '\0'; i++) {
         h = (h^str[i]) * 16777619;
     }
-    return h % MAX_HASHTABLE_SIZE;
+    return h;
 }
 
 /**
@@ -43,7 +43,7 @@ unsigned long hash(const char* str) {
  * @param n
  * @return
  */
-unsigned long ngrams_hash(char* str, int n) {
+unsigned long ngrams_hash(const char* str, int n) {
     unsigned long hashValue = 0;
     int len = (int) strlen(str);
 
@@ -58,7 +58,7 @@ unsigned long ngrams_hash(char* str, int n) {
 
         hashValue += h;
     }
-    return hashValue;
+    return hashValue % MAX_HASHTABLE_SIZE;
 }
 
 /**
@@ -87,15 +87,21 @@ HashTable * create(int capacity) {
  * @param value
  */
 void insert(HashTable* table, const char *key, const char *value) {
-    int index = (int)hash(key);
+    int index = (int) ngrams_hash(key, 2);
 
     struct KvData* node =  malloc(sizeof(struct KvData));
     strcpy(node->key, key);
     strcpy(node->value, value);
 
     /* 头插法 */
-    node->next = table->buckets[index];
-    table->buckets[index] = node;
+    struct KvData **head = &(table->buckets[index]);
+    if ((*head) == NULL) {
+        (*head) = malloc(sizeof (struct KvData));
+        (*head)->next = NULL;
+    }
+
+    node->next = (*head)->next;
+    (*head)->next = node;
     table->size++;
 }
 
@@ -106,7 +112,7 @@ void insert(HashTable* table, const char *key, const char *value) {
  * @return
  */
 struct KvData* search(HashTable* table, const char* key) {
-    int index = (int)hash(key);
+    int index = (int) ngrams_hash(key, 2);
     struct KvData* cur = table->buckets[index];
 
     while (cur != NULL) {
@@ -116,5 +122,22 @@ struct KvData* search(HashTable* table, const char* key) {
         cur = cur->next;
     }
     return NULL;
+}
+
+/**
+ * 删除节点
+ * @param table
+ * @param key
+ */
+int delete(HashTable * table, const char * key) {
+    int index = (int) ngrams_hash(key, 2);
+    struct KvData* cur = table->buckets[index];
+    while (cur->next != NULL) {
+        if (strcmp(cur->next->key, key) == 0) {
+            cur->next = cur->next->next;
+            return 1;
+        }
+    }
+    return 0;
 }
 #endif //UNTITLED_HASHTABLE_H

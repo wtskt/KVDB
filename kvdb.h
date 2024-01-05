@@ -10,6 +10,9 @@
 #ifndef UNTITLED_KVDB_H
 #define UNTITLED_KVDB_H
 
+/**
+ * 数据库管理对象
+ */
 struct DataBase {
     HashTable * table;
     HashTable * newData;
@@ -44,6 +47,13 @@ char* getStr(const char * key);
  * @param value
  */
 void setStr(const char * key, const char * value);
+
+/**
+ * 删除kv对 - 未实现
+ * @param key
+ * @return
+ */
+int removeStr(const char * key);
 
 /**
  * 初始化数据库
@@ -104,7 +114,11 @@ void close() {
     // 遍历，将新数据写入文件
     for (int i = 0; i < KVDB.newData->capacity; i++) {
         struct KvData * cur = KVDB.newData->buckets[i];
-        
+
+        if (cur != NULL) {
+            cur = cur->next;
+        }
+
         while (cur != NULL) {
             fwrite(cur, KVDB.dataSize, 1, fp);
             cur = cur->next;
@@ -122,6 +136,10 @@ void setStr(const char* key, const char* value) {
     insert(KVDB.newData, key, value);
     insert(KVDB.table, key, value);
     KVDB.count++;
+}
+
+int removeStr(const char * key) {
+    return 0;
 }
 #endif //UNTITLED_KVDB_H
 
